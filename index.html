@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebKitGTK image paste</title>
+    <style>
+      body {
+        margin: 3rem;
+        font: 18px sans-serif;
+      }
+
+      section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      pre {
+        padding: 1rem;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+        background: #eee;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebKitGTK image paste</h1>
+    <p>Copy an image, focus this window, and press Ctrl+V.</p>
+
+    <section>
+      <div>
+        <h2>ClipboardEvent</h2>
+        <pre id="legacy-output">Waiting…</pre>
+      </div>
+      <div>
+        <h2>navigator.clipboard.read()</h2>
+        <pre id="async-output">Waiting…</pre>
+      </div>
+    </section>
+
+    <script>
+      const legacyOutput = document.querySelector("#legacy-output");
+      const asyncOutput = document.querySelector("#async-output");
+
+      addEventListener("paste", async (event) => {
+        const items = [...event.clipboardData.items];
+        const eventResult = {
+          types: [...event.clipboardData.types],
+          items: items.map((item) => {
+            const file = item.getAsFile();
+            return {
+              kind: item.kind,
+              type: item.type,
+              file: file && { type: file.type, size: file.size },
+            };
+          }),
+          files: event.clipboardData.files.length,
+          text: Object.fromEntries(
+            [...event.clipboardData.types]
+              .filter((type) => type.startsWith("text/"))
+              .map((type) => [
+                type,
+                event.clipboardData.getData(type).slice(0, 200),
+              ]),
+          ),
+        };
+        legacyOutput.textContent = JSON.stringify(eventResult, null, 2);
+
+        try {
+          const result = [];
+          for (const item of await navigator.clipboard.read()) {
+            const types = [];
+            for (const type of item.types) {
+              const blob = await item.getType(type);
+              types.push({
+                type,
+                size: blob.size,
+                text: type.startsWith("text/")
+                  ? (await blob.text()).slice(0, 200)
+                  : undefined,
+              });
+            }
+            result.push(types);
+          }
+          asyncOutput.textContent = JSON.stringify(result, null, 2);
+        } catch (error) {
+          asyncOutput.textContent = String(error);
+        }
+      });
+    </script>
+  </body>
+</html>
