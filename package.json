@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "scripts": {
+    "start": "bun repro.ts"
+  },
+  "dependencies": {
+    "@opentui/core": "0.4.5"
+  }
+}
